@@ -5,13 +5,54 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "splat360"
 version = "0.1.0"
-description = "360 Video to Gaussian Splat Pipeline"
+description = "360° Video → 3D Gaussian Splat Pipeline"
+requires-python = ">=3.10"
 dependencies = [
-    "pydantic",
-    "numpy",
-    "typer",
-    "rich"
+    "pydantic>=1.10,<3",
+    "pyyaml>=6.0",
+    "typer>=0.9",
+    "rich>=13.0",
 ]
 
 [project.scripts]
 splat360 = "splat360.cli:app"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "ruff>=0.1",
+    "mypy>=1.5",
+    "pre-commit",
+]
+gpu = [
+    "torch",
+    "gsplat",
+    "pycolmap",
+    "transformers",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "gpu: requires CUDA GPU",
+    "colmap: requires COLMAP installation",
+]
