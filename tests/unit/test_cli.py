@@ -9,8 +9,6 @@ from __future__ import annotations
 import subprocess
 import sys
 
-import pytest
-
 
 def _run_cli(*args: str) -> subprocess.CompletedProcess[str]:
     """Run ``python -m splat360 <args>`` and return the result."""

@@ -10,13 +10,11 @@ Milestone: M0
 from __future__ import annotations
 
 import json
-import os
 import platform
 import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.console import Console
@@ -26,7 +24,7 @@ from splat360.constants import STAGE_ORDER, VERSION
 
 app = typer.Typer(
     name="splat360",
-    help="360° Video → 3D Gaussian Splat Pipeline.",
+    help="360 Video -> 3D Gaussian Splat Pipeline.",
     add_completion=False,
     no_args_is_help=True,
 )
@@ -46,7 +44,7 @@ def main(
         help="Show version and exit.",
     ),
 ) -> None:
-    """splat360 — 360° Video → 3D Gaussian Splat Pipeline."""
+    """splat360 - 360 Video -> 3D Gaussian Splat Pipeline."""
 
 
 # ---------------------------------------------------------------------------
@@ -57,13 +55,13 @@ def main(
 @app.command()
 def run(
     source: str = typer.Argument(..., help="YouTube URL or local video file path."),
-    preset: Optional[str] = typer.Option(None, "--preset", "-p", help="Config preset."),
-    scene_timestamps: Optional[str] = typer.Option(
+    preset: str | None = typer.Option(None, "--preset", "-p", help="Config preset."),
+    scene_timestamps: str | None = typer.Option(
         None, "--scene-timestamps", help="Comma-separated time ranges."
     ),
     workspace: str = typer.Option("workspace", "--workspace", "-w", help="Workspace root."),
-    config_file: Optional[Path] = typer.Option(None, "--config", "-c", help="Config YAML."),
-    set_overrides: Optional[list[str]] = typer.Option(None, "--set", help="key=value overrides."),
+    config_file: Path | None = typer.Option(None, "--config", "-c", help="Config YAML."),
+    set_overrides: list[str] | None = typer.Option(None, "--set", help="key=value overrides."),
     force: bool = typer.Option(False, "--force", help="Force re-run all stages."),
     i_have_permission: bool = typer.Option(
         False, "--i-have-permission", help="Acknowledge video permission."
@@ -159,10 +157,9 @@ def stage(
 @app.command()
 def inspect(
     video: str = typer.Argument(..., help="Video URL or path to inspect."),
-    preset: Optional[str] = typer.Option(None, "--preset", "-p"),
+    preset: str | None = typer.Option(None, "--preset", "-p"),
 ) -> None:
     """Run preflight only and print the verdict."""
-    from splat360.errors import StageNotImplemented
 
     # Preflight is M1 — inform the user.
     console.print(
@@ -199,7 +196,7 @@ def report(
 @app.command()
 def clean(
     workspace: str = typer.Option("workspace", "--workspace", "-w"),
-    job_id: Optional[str] = typer.Option(None, "--job", help="Job ID to clean (all if omitted)."),
+    job_id: str | None = typer.Option(None, "--job", help="Job ID to clean (all if omitted)."),
 ) -> None:
     """Remove workspace outputs."""
     ws = Path(workspace)
@@ -215,7 +212,7 @@ def clean(
             shutil.rmtree(ws)
             console.print(f"Cleaned {ws}")
         else:
-            console.print(f"[yellow]Nothing to clean.[/]")
+            console.print("[yellow]Nothing to clean.[/]")
 
 
 # ---------------------------------------------------------------------------

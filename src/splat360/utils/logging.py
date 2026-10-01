@@ -10,8 +10,6 @@ from __future__ import annotations
 import logging
 import sys
 from pathlib import Path
-from typing import Optional
-
 
 _CONFIGURED = False
 
@@ -19,7 +17,7 @@ _CONFIGURED = False
 def setup_logging(
     *,
     level: int = logging.INFO,
-    log_file: Optional[Path] = None,
+    log_file: Path | None = None,
     rich_console: bool = True,
 ) -> logging.Logger:
     """Configure the ``splat360`` root logger.
@@ -36,7 +34,7 @@ def setup_logging(
 
     Returns the root ``splat360`` logger.
     """
-    global _CONFIGURED  # noqa: PLW0603
+    global _CONFIGURED
 
     logger = logging.getLogger("splat360")
     logger.setLevel(level)
@@ -48,6 +46,7 @@ def setup_logging(
     datefmt = "%Y-%m-%d %H:%M:%S"
 
     # Console handler
+    console_handler: logging.Handler
     if rich_console:
         try:
             from rich.logging import RichHandler

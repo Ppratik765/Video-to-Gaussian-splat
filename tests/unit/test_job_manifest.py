@@ -10,7 +10,13 @@ from pathlib import Path
 import pytest
 
 from splat360.config import PipelineConfig, load_config
-from splat360.constants import STATUS_DONE, STATUS_FAILED, STATUS_PENDING, STATUS_RUNNING, STATUS_SKIPPED
+from splat360.constants import (
+    STATUS_DONE,
+    STATUS_FAILED,
+    STATUS_PENDING,
+    STATUS_RUNNING,
+    STATUS_SKIPPED,
+)
 from splat360.job import Job
 
 

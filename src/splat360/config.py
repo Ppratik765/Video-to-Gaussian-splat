@@ -3,7 +3,7 @@ Pydantic configuration models, YAML loading, preset merging, and CLI overrides.
 
 Hierarchy:  defaults → preset YAML → user YAML → ``--set key=value`` overrides.
 
-Supports both pydantic v1 (PyPy) and v2 (CPython) via a thin compat layer.
+Uses pydantic v2 only.
 
 Responsibility: config.py
 Milestone: M0
@@ -14,31 +14,12 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 from splat360.constants import VERSION
 from splat360.errors import ConfigError
-
-# ---------------------------------------------------------------------------
-# Pydantic v1 / v2 compatibility
-# ---------------------------------------------------------------------------
-
-_PYDANTIC_V2 = int(getattr(__import__("pydantic"), "VERSION", "1").split(".")[0]) >= 2
-
-
-def _model_to_dict(model: BaseModel) -> dict[str, Any]:
-    if _PYDANTIC_V2:
-        return json.loads(model.model_dump_json())  # type: ignore[attr-defined]
-    return json.loads(model.json())
-
-
-def _model_schema(model_cls: type) -> dict[str, Any]:
-    if _PYDANTIC_V2:
-        return model_cls.model_json_schema()  # type: ignore[attr-defined]
-    return model_cls.schema()
-
 
 # ---------------------------------------------------------------------------
 # Sub-models — one per conceptual area
@@ -48,7 +29,7 @@ def _model_schema(model_cls: type) -> dict[str, Any]:
 class IngestConfig(BaseModel):
     """Settings for S0 (ingest)."""
 
-    cookies_file: Optional[str] = Field(
+    cookies_file: str | None = Field(
         None, description="Path to a cookies.txt for yt-dlp"
     )
     i_have_permission: bool = Field(
@@ -160,7 +141,7 @@ class ExportConfig(BaseModel):
     min_opacity: float = Field(0.005, description="Remove Gaussians below this opacity")
     outlier_std: float = Field(3.0, description="Standard deviations for outlier removal")
     camera_margin: float = Field(1.5, description="Crop margin multiplier around camera path")
-    compress_format: Optional[str] = Field(
+    compress_format: str | None = Field(
         None, description="Optional compressed format: 'spz' | 'sog' | null"
     )
 
@@ -172,27 +153,25 @@ class PipelineConfig(BaseModel):
     this model's defaults.
     """
 
-    version: str = Field(VERSION, description="Config schema version")
-    workspace: str = Field("workspace", description="Root workspace directory")
-    preset: Optional[str] = Field(None, description="Named preset to merge on top of defaults")
+    model_config = {"extra": "forbid"}
 
-    ingest: IngestConfig = Field(default_factory=IngestConfig)
-    preflight: PreflightConfig = Field(default_factory=PreflightConfig)
-    frames: FramesConfig = Field(default_factory=FramesConfig)
-    rig: RigConfig = Field(default_factory=RigConfig)
-    sfm: SfmConfig = Field(default_factory=SfmConfig)
-    post_sfm_gate: PostSfmGateConfig = Field(default_factory=PostSfmGateConfig)
-    train: TrainConfig = Field(default_factory=TrainConfig)
-    export: ExportConfig = Field(default_factory=ExportConfig)
+    version: str = Field(default=VERSION, description="Config schema version")
+    workspace: str = Field(default="workspace", description="Root workspace directory")
+    preset: str | None = Field(default=None, description="Named preset to merge on top of defaults")
+
+    ingest: IngestConfig = Field(default_factory=lambda: IngestConfig())
+    preflight: PreflightConfig = Field(default_factory=lambda: PreflightConfig())
+    frames: FramesConfig = Field(default_factory=lambda: FramesConfig())
+    rig: RigConfig = Field(default_factory=lambda: RigConfig())
+    sfm: SfmConfig = Field(default_factory=lambda: SfmConfig())
+    post_sfm_gate: PostSfmGateConfig = Field(default_factory=lambda: PostSfmGateConfig())
+    train: TrainConfig = Field(default_factory=lambda: TrainConfig())
+    export: ExportConfig = Field(default_factory=lambda: ExportConfig())
 
     # ------------------------------------------------------------------
     # force flag (not persisted in YAML, set via CLI)
     # ------------------------------------------------------------------
     force: bool = Field(False, description="Force re-run of all stages")
-
-    class Config:
-        # pydantic v1 config
-        extra = "forbid"
 
 
 # ---------------------------------------------------------------------------
@@ -264,9 +243,9 @@ _CONFIGS_DIR = Path(__file__).resolve().parent.parent.parent / "configs"
 
 def load_config(
     *,
-    config_file: Optional[Path] = None,
-    preset: Optional[str] = None,
-    set_overrides: Optional[list[str]] = None,
+    config_file: Path | None = None,
+    preset: str | None = None,
+    set_overrides: list[str] | None = None,
     force: bool = False,
 ) -> PipelineConfig:
     """Build a ``PipelineConfig`` by merging layers.
@@ -329,12 +308,12 @@ def load_config(
 
 def config_to_dict(cfg: PipelineConfig) -> dict[str, Any]:
     """Serialise config to a plain dict (for manifest snapshot)."""
-    return _model_to_dict(cfg)
+    return json.loads(cfg.model_dump_json())  # type: ignore[no-any-return]
 
 
 def generate_schema() -> dict[str, Any]:
     """Return the JSON Schema for ``PipelineConfig``."""
-    return _model_schema(PipelineConfig)
+    return PipelineConfig.model_json_schema()
 
 
 def generate_default_yaml() -> str:
@@ -346,7 +325,7 @@ def generate_default_yaml() -> str:
 
     cfg = PipelineConfig()
     data = config_to_dict(cfg)
-    return yaml.dump(data, default_flow_style=False, sort_keys=False)
+    return yaml.dump(data, default_flow_style=False, sort_keys=False)  # type: ignore[no-any-return]
 
 
 # ---------------------------------------------------------------------------

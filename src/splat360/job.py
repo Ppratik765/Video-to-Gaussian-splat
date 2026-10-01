@@ -11,11 +11,10 @@ Milestone: M0
 from __future__ import annotations
 
 import json
-import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from splat360.config import PipelineConfig, config_to_dict
 from splat360.constants import (
@@ -90,7 +89,7 @@ class Job:
         workspace: Path,
         cfg: PipelineConfig,
         source: str = "",
-        job_id: Optional[str] = None,
+        job_id: str | None = None,
     ) -> None:
         self.job_id = job_id or uuid.uuid4().hex[:12]
         self.workspace = Path(workspace)
@@ -122,7 +121,7 @@ class Job:
     @property
     def manifest(self) -> dict[str, Any]:
         """Return a *copy* of the current manifest."""
-        return json.loads(json.dumps(self._manifest))
+        return json.loads(json.dumps(self._manifest))  # type: ignore[no-any-return]
 
     # ------------------------------------------------------------------
     # Stage directories
@@ -149,7 +148,7 @@ class Job:
             return STATUS_PENDING
         return entry["status"]  # type: ignore[no-any-return]
 
-    def stage_fingerprint(self, stage_name: str) -> Optional[str]:
+    def stage_fingerprint(self, stage_name: str) -> str | None:
         """Return the stored fingerprint for *stage_name*, or None."""
         entry = self._manifest["stages"].get(stage_name)
         if entry is None:
