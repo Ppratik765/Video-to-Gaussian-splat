@@ -71,6 +71,18 @@ class PreflightConfig(BaseModel):
     dynamic_content_warn: float = Field(
         0.30, description="Fraction of pixels classified dynamic before WARN"
     )
+    exposure_flicker_threshold: float = Field(
+        50.0, description="Max allowed exposure flicker (std of mean luminance) (provisional)"
+    )
+    working_resolution: int = Field(
+        640, description="Width to resize video for preflight checks (provisional)"
+    )
+    sampling_rate_fps: float = Field(
+        1.0, description="Frames per second to sample for preflight checks (provisional)"
+    )
+    max_rotation_ratio: float = Field(
+        0.8, description="Maximum allowed rotation_ratio before REJECT (provisional)"
+    )
 
 
 class FramesConfig(BaseModel):

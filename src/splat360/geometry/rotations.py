@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def R_x(theta: float) -> np.ndarray:
     """Rotation around X axis."""
     c, s = np.cos(theta), np.sin(theta)

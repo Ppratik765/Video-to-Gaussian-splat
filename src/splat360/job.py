@@ -90,11 +90,17 @@ class Job:
         cfg: PipelineConfig,
         source: str = "",
         job_id: str | None = None,
+        permission_note: str = "",
+        i_have_permission: bool = False,
+        cookies: str | None = None,
     ) -> None:
         self.job_id = job_id or uuid.uuid4().hex[:12]
         self.workspace = Path(workspace)
         self.cfg = cfg
         self.source = source
+        self.permission_note = permission_note
+        self.i_have_permission = i_have_permission
+        self.cookies = cookies
 
         # Load or create manifest
         self._manifest_path = self.workspace / MANIFEST_FILENAME
@@ -113,7 +119,7 @@ class Job:
 
     def _read_manifest(self) -> dict[str, Any]:
         with open(self._manifest_path, encoding="utf-8") as f:
-            return json.load(f)  # type: ignore[no-any-return]
+            return dict(json.load(f))
 
     def _write_manifest(self) -> None:
         atomic_json_write(self._manifest_path, self._manifest)
@@ -121,7 +127,7 @@ class Job:
     @property
     def manifest(self) -> dict[str, Any]:
         """Return a *copy* of the current manifest."""
-        return json.loads(json.dumps(self._manifest))  # type: ignore[no-any-return]
+        return dict(json.loads(json.dumps(self._manifest)))
 
     # ------------------------------------------------------------------
     # Stage directories

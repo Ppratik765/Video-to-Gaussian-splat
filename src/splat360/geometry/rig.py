@@ -1,7 +1,9 @@
 from dataclasses import dataclass
+
 import numpy as np
 
 from splat360.geometry.rotations import R_x, R_y
+
 
 @dataclass
 class ViewDefinition:
