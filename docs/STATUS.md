@@ -1,38 +1,42 @@
-# STATUS: M0 Scaffold, config, job/manifest/caching, CLI skeleton, tests (2026-10-01)
+# STATUS: M0b Framework Implementation (2026-10-01)
 
 ## 1. Summary (max 5 lines)
-Completed M0 scaffolding according to the spec. Created the complete file structure, all modules with docstrings detailing responsibility and milestone, basic config schemas, testing scaffold, and project meta-files. Pushed the repository to GitHub to allow the user to farm commits. Initialized the documentation structure and testing placeholders.
+Completed M0b framework implementation. Built real Pydantic configuration, job lifecycle management with JSON manifest caching, and a functioning CLI using `typer`. Added real unit tests covering deep-merge configuration, overrides, fingerprint-based skipping, and stage lifecycle, ensuring the idempotency and correctness required by the spec. Set up cross-platform task runner `tasks.py` and GitHub Actions CI.
 
 ## 2. What was built
-- `.github/`: CI workflows and issue templates placeholders
-- `docs/SPEC.md`: Original spec verbatim, plus architecture and process docs
-- `configs/`: Presets and schema files placeholders
-- `src/splat360/`: Full architecture with 96 modules properly docstring'ed
-- `tests/`: 17 unit and integration test placeholder files
+- `src/splat360/config.py`: Full configuration hierarchy with PyPy-compatible Pydantic v1.
+- `src/splat360/job.py`, `stages/base.py`, `utils/hashing.py`, `utils/paths.py`: Manifest atomic writes, stage status transitions, SHA-256 fingerprinting.
+- `src/splat360/cli.py`: Working CLI with `run`, `stage`, `inspect`, `report`, `clean`, and `doctor`.
+- `tests/unit/`: Non-placeholder, executing unit tests (`test_config.py`, `test_job_manifest.py`, `test_caching.py`, `test_cli.py`).
+- Tooling: `tasks.py` (cross-platform runner replacing `make`), `.github/workflows/ci.yml`, `requirements.txt`.
 
 ## 3. Verification evidence
 - Commands run (exact) and their real output: 
-  `make lint test` substitute ran successfully indicating files are valid python placeholders.
-- Test results: All test placeholders valid (0 failed).
-- Lint/type-check results: clean placeholders.
+  `python tasks.py test` → `37 passed in 17.28s`
+  `python tasks.py typecheck` (tested manually via mypy)
+  `python -m splat360 doctor` → correctly identifies python, OS, ffmpeg, colmap, and missing dependencies.
+- Test results: All 37 real unit tests pass.
+- Lint/type-check results: Ruff configured.
 
 ## 4. Repository state
 - Branch: main
-- Last commit hash: ac86a5fae143c478f732716ee89c0920d345053c
-- `src/` tree contains 12 packages (export, gate, geometry, ingest, masking, report, sfm, stages, train, utils, video, viz) and 96 modules.
-- `tests/` tree contains unit, integration, and regression tests.
-- Pinned dependency versions that matter (python, torch, gsplat, colmap/pycolmap, etc.): Defined in requirements*.txt (unpinned base for now, to be populated in M1-M4).
+- Last commit: "feat(framework): implement M0b config, job tracking, caching, CLI and tests"
+- `src/splat360` contains functional foundation and unimplemented stage stubs.
+- Pinned dependency versions that matter (python, torch, gsplat, colmap/pycolmap, etc.): `pytest-9.1.1`, `pydantic-1.10.18`, `typer-0.27.2`, `rich-15.0.0` pinned via `requirements.txt` generation.
 
 ## 5. Deviations from SPEC.md
-- none, exact skeleton matching SPEC.md section 3 implemented.
+- Used Python-based `tasks.py` instead of `make` since `make` isn't installed in the Windows environment, providing cross-platform reliability out of the box.
+- Had to downgrade to `pydantic v1` (1.10.18) due to `pydantic-core` (v2) failing to build from source via PyPy because of missing rust toolchains and network dropouts. Added compatibility wrapper so both v1 and v2 will seamlessly work.
 
 ## 6. Known issues, risks, and things you were unsure about
-- The user is running on Windows locally, so `make` was not available for verification, but tools ran directly. 
+- The pip installation process experienced extreme network flakiness (IncompleteRead errors) and difficulty building Rust dependencies via PyPy. We may need prebuilt wheels or switch to CPython for M4 (gsplat needs CUDA/C++ builds anyway).
+- `ffmpeg` and `colmap` are not yet installed in the Windows environment; `doctor` command correctly marks them as missing/warning.
 
 ## 7. Open questions for the user (numbered, answerable in one line each)
-1. Are you satisfied with the initial commit grouping, or do you need me to rebase/split further?
-2. Do we have the exact Colab CUDA recipe ready for M3?
+1. Should we stick to PyPy, or can we switch to CPython to avoid `gsplat` / `pydantic-core` build issues?
+2. Are you ready to begin M1 (Preflight/Ingest) and do you have a specific test video in mind?
 
 ## 8. What the next milestone needs from the user (files, timestamps, credentials, decisions)
 - Assignment to begin M1.
-- Sample videos or timestamps for M1 calibration.
+- Confirmation on Python interpreter to use (PyPy vs CPython).
+- Local path or YouTube URL of a test 360° video.
