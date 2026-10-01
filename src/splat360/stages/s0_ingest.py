@@ -24,4 +24,4 @@ class IngestStage(Stage):
         raise StageNotImplemented(self.name, "M1")
 
     def fingerprint(self, job: Job, cfg: PipelineConfig) -> str:
-        return hash_dict({"source": job.source, "ingest": cfg.ingest.dict()})
+        return hash_dict({"source": job.source, "ingest": cfg.ingest.model_dump()})

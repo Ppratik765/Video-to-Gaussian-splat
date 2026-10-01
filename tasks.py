@@ -12,6 +12,7 @@ Commands:
 import subprocess
 import sys
 
+
 def run(cmd):
     print(f"--> {' '.join(cmd)}")
     res = subprocess.run(cmd)
@@ -22,9 +23,9 @@ def main():
     if len(sys.argv) < 2:
         print(__doc__)
         sys.exit(1)
-        
+
     cmd = sys.argv[1]
-    
+
     if cmd == "test":
         run([sys.executable, "-m", "pytest", "tests/unit", "-v"])
     elif cmd == "lint":

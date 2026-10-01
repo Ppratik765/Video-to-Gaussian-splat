@@ -18,10 +18,10 @@ import time
 import traceback
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 from splat360.config import PipelineConfig
-from splat360.constants import STATUS_DONE, VERDICT_REJECT
+from splat360.constants import STATUS_DONE
 from splat360.errors import GateRejected, StageFailed
 from splat360.job import Job
 from splat360.utils.logging import get_logger
@@ -40,7 +40,7 @@ class StageResult:
 
     success: bool = True
     message: str = ""
-    verdict: Optional[str] = None  # for gate stages
+    verdict: str | None = None  # for gate stages
     reasons: list[dict[str, Any]] = field(default_factory=list)
     metrics: dict[str, Any] = field(default_factory=dict)
     skipped: bool = False

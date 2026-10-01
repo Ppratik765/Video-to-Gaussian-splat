@@ -1,6 +1,5 @@
-import urllib.request
 import json
-import sys
+import urllib.request
 
 packages = ["pytest", "iniconfig", "pluggy", "exceptiongroup", "tomli", "packaging"]
 for pkg in packages:

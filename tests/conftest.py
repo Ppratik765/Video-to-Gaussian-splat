@@ -6,8 +6,6 @@ GPU/COLMAP tests are marked so they are skipped on CPU-only machines.
 
 from __future__ import annotations
 
-import shutil
-import tempfile
 from pathlib import Path
 
 import pytest

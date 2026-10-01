@@ -1,5 +1,5 @@
-import urllib.request
 import json
+import urllib.request
 
 # Find the correct URL for pydantic 1.10.18 wheel
 url = "https://pypi.org/pypi/pydantic/1.10.18/json"

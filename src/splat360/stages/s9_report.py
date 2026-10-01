@@ -1,11 +1,13 @@
 """S9: Report (JSON + Markdown/HTML). Milestone: M5"""
 from __future__ import annotations
+
 from splat360.config import PipelineConfig
 from splat360.constants import STAGE_EXPORT_EVAL, STAGE_REPORT
 from splat360.errors import StageNotImplemented
 from splat360.job import Job
 from splat360.stages.base import Stage, StageResult
 from splat360.utils.hashing import hash_dict
+
 
 class ReportStage(Stage):
     @property
