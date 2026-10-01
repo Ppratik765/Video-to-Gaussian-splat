@@ -9,5 +9,8 @@ __pycache__/
 .pytest_cache/
 *.whl
 *.egg-info/
-venv/
+venv*/
+.venv*
+.mypy_cache/
+.ruff_cache/
 .env
