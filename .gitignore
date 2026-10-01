@@ -1,0 +1,9 @@
+workspace/
+*.ply
+*.mp4
+checkpoints/
+caches/
+.ipynb_checkpoints/
+__pycache__/
+*.pyc
+.pytest_cache/
