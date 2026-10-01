@@ -1,4 +1,7 @@
 """
-Responsibility: __main__.py
-Milestone: M0
+Allow ``python -m splat360`` to launch the CLI.
 """
+
+from splat360.cli import app
+
+app()
