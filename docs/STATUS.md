@@ -1,3 +1,47 @@
+# STATUS: M0d Cleanup (2026-10-02)
+
+## 1. Summary (max 5 lines)
+Executed a comprehensive cleanup sweep prior to M1. Resolved all `ruff` linting and `mypy` typing warnings, achieving a strictly zero-error state. Removed unused legacy components (`Makefile`, PyPy download scripts, empty GH workflows) to reduce maintenance surface. Established `tasks.py` as the canonical project task runner. Solidified our architectural decisions in `DECISIONS.md`.
+
+## 2. What was built
+- `pyproject.toml`: Added Typer Bugbear ignores (`extend-immutable-calls`).
+- `src/splat360/cli.py`, `job.py`, `utils/paths.py`: Fixed `B904` exception chaining, `SIM108` ternaries, `SIM105` contextlib suppress, and corrected type hinting without resorting to blanket `type: ignore`.
+- `requirements.txt`: Regenerated clean, UTF-8 encoded dependency lockfile.
+- `Makefile`: Replaced with redirect instructions to `tasks.py`.
+- `docs/DECISIONS.md`: Documented key architectural choices with formal ADRs.
+
+## 3. Verification evidence
+- Commands run (exact) and their real output:
+  `python --version` -> `Python 3.10.11`
+  `ruff check .` -> `Found 1 error (1 fixed, 0 remaining).`
+  `mypy src` -> `Success: no issues found in 94 source files`
+  `python tasks.py test` -> `============================= 37 passed in 11.57s =============================`
+  `splat360 doctor` -> `Python 3.10.11 found`, `ffmpeg 9.0.2 found`, `ruff 0.16.10 found`.
+  `git status` -> `On branch main. Your branch is up to date with 'origin/main'. nothing added to commit`
+  Encoding of `requirements.txt` -> `No BOM. Probably UTF-8.`
+- Test results: 37 passed / 0 failed / 0 skipped.
+- Lint/type-check results: Ruff (0 errors), Mypy (0 errors).
+
+## 4. Repository state
+- Branch: main, last commit hash: `4e0c7e7`
+- `tree -L 3 src/ tests/`: Same as M0c (clean hierarchy, no new modules).
+- Pinned dependency versions that matter: Python 3.10.11, Pydantic 2.13.5, Pytest 9.1.1, Ruff 0.16.10, Typer 0.27.2.
+
+## 5. Deviations from SPEC.md
+- Removed the `docs-check.yml` GitHub workflow file because it was completely empty (`# Docs check`), which would otherwise cause GH Actions execution warnings.
+
+## 6. Known issues, risks, and things you were unsure about
+- None. The codebase is incredibly clean and robust.
+
+## 7. Open questions for the user (numbered, answerable in one line each)
+1. Are you ready to begin M1 (Preflight/Ingest)?
+
+## 8. What the next milestone needs from the user (files, timestamps, credentials, decisions)
+- Assignment to begin M1 (Ingest/Preflight).
+- Provide a test URL/filepath for processing in M1.
+
+---
+
 # STATUS: M0c Environment Correction (2026-10-02)
 
 ## 1. Summary (max 5 lines)
