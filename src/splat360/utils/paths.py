@@ -30,10 +30,7 @@ def stage_dir(ws: Path, stage_name: str) -> Path:
     Creates the directory if it does not exist.
     """
     subdir = WORKSPACE_DIRS.get(stage_name, stage_name)
-    if subdir:
-        p = ws / subdir
-    else:
-        p = ws
+    p = ws / subdir if subdir else ws
     p.mkdir(parents=True, exist_ok=True)
     return p
 
@@ -62,8 +59,7 @@ def atomic_json_write(path: Path, data: Any) -> None:
         os.replace(tmp, str(path))
     except BaseException:
         # Clean up the temp file on failure.
-        try:
+        import contextlib
+        with contextlib.suppress(OSError):
             os.unlink(tmp)
-        except OSError:
-            pass
         raise

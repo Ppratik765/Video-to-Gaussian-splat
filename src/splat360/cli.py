@@ -105,10 +105,10 @@ def run(
             break
         except GateRejected as exc:
             console.print(f"  [red]✗ {stage_name}: REJECTED — {exc}[/]")
-            raise typer.Exit(code=0)
+            raise typer.Exit(code=0) from exc
         except StageFailed as exc:
             console.print(f"  [red]✗ {stage_name}: FAILED — {exc}[/]")
-            raise typer.Exit(code=1)
+            raise typer.Exit(code=1) from exc
 
     console.print("[bold green]Pipeline finished.[/]")
 
@@ -146,7 +146,7 @@ def stage(
         console.print(f"[green]✓ {name}[/]")
     except StageNotImplemented as exc:
         console.print(f"[yellow]{exc}[/]")
-        raise typer.Exit(code=0)
+        raise typer.Exit(code=0) from exc
 
 
 # ---------------------------------------------------------------------------

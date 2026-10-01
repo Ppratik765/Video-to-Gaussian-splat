@@ -12,13 +12,15 @@ from splat360.constants import (
     STAGE_FRAMES,
     STAGE_INGEST,
     STAGE_MASKS,
-    STAGE_ORDER,
     STAGE_POSTSFM_GATE,
     STAGE_PREFLIGHT,
     STAGE_REPORT,
     STAGE_RIG,
     STAGE_SFM,
     STAGE_TRAIN,
+)
+from splat360.constants import (
+    STAGE_ORDER as STAGE_ORDER,
 )
 from splat360.stages.base import Stage
 

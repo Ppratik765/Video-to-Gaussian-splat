@@ -130,10 +130,7 @@ class Job:
     def stage_dir(self, stage_name: str) -> Path:
         """Return (and create) the output directory for *stage_name*."""
         subdir = WORKSPACE_DIRS.get(stage_name, stage_name)
-        if subdir:
-            p = self.workspace / subdir
-        else:
-            p = self.workspace
+        p = self.workspace / subdir if subdir else self.workspace
         p.mkdir(parents=True, exist_ok=True)
         return p
 
@@ -146,14 +143,16 @@ class Job:
         entry = self._manifest["stages"].get(stage_name)
         if entry is None:
             return STATUS_PENDING
-        return entry["status"]  # type: ignore[no-any-return]
+        status = entry.get("status", STATUS_PENDING)
+        return str(status)
 
     def stage_fingerprint(self, stage_name: str) -> str | None:
         """Return the stored fingerprint for *stage_name*, or None."""
         entry = self._manifest["stages"].get(stage_name)
         if entry is None:
             return None
-        return entry.get("fingerprint")  # type: ignore[return-value]
+        fp = entry.get("fingerprint")
+        return str(fp) if fp is not None else None
 
     def mark_running(self, stage_name: str) -> None:
         """Mark a stage as currently running."""
