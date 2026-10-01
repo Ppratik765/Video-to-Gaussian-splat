@@ -57,8 +57,3 @@ class TestCLIDoctor:
         assert "python" in result.stdout.lower() or "Python" in result.stdout
 
 
-class TestCLIInspect:
-    def test_inspect_reports_not_implemented(self) -> None:
-        result = _run_cli("inspect", "dummy_video.mp4")
-        assert result.returncode == 0
-        assert "M1" in result.stdout

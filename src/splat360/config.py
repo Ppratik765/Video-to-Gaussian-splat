@@ -60,7 +60,7 @@ class PreflightConfig(BaseModel):
         2.0, description="Minimum median flow (px) to avoid no_parallax"
     )
     max_flow_magnitude: float = Field(
-        80.0, description="Maximum per-frame flow (px) before motion_too_fast warning"
+        10.0, description="Maximum per-frame flow (px) before motion_too_fast warning"
     )
     camera_attached_warn: float = Field(
         0.15, description="Sphere fraction covered by camera-attached regions before WARN"

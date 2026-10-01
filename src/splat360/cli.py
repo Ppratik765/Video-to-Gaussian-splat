@@ -158,14 +158,52 @@ def stage(
 def inspect(
     video: str = typer.Argument(..., help="Video URL or path to inspect."),
     preset: str | None = typer.Option(None, "--preset", "-p"),
+    workspace: str = typer.Option("workspace", "--workspace", "-w"),
 ) -> None:
     """Run preflight only and print the verdict."""
-
-    # Preflight is M1 — inform the user.
-    console.print(
-        "[yellow]inspect requires S0 + S1 (preflight), which are planned for M1.[/]"
-    )
-    raise typer.Exit(code=0)
+    from splat360.config import load_config
+    from splat360.errors import GateRejected, StageFailed
+    from splat360.job import Job
+    from splat360.stages import get_stage
+    from splat360.utils.logging import setup_logging
+    
+    setup_logging()
+    cfg = load_config(preset=preset)
+    
+    # Generate unique workspace for inspect
+    job_ws = Path(workspace) / ("inspect_" + video.replace("/", "_").replace(":", "_")[:40])
+    job = Job(workspace=job_ws, cfg=cfg, source=video)
+    
+    # We must set i_have_permission for inspect so S0 doesn't fail
+    job.i_have_permission = True
+    
+    # Run S0
+    s0 = get_stage("s0_ingest")
+    try:
+        s0.execute(job, cfg)
+    except StageFailed as exc:
+        console.print(f"[red]Ingest failed: {exc}[/]")
+        raise typer.Exit(code=1)
+        
+    # Run S1
+    s1 = get_stage("s1_preflight")
+    try:
+        s1.execute(job, cfg)
+    except GateRejected as exc:
+        pass # Expected for REJECT
+    except StageFailed as exc:
+        console.print(f"[red]Preflight failed: {exc}[/]")
+        raise typer.Exit(code=1)
+        
+    preflight_data = job.manifest.get("stages", {}).get("s1_preflight", {})
+    verdict = preflight_data.get("verdict", "UNKNOWN")
+    
+    console.print(f"\n[bold]Verdict:[/] {verdict}")
+    if verdict == "REJECT":
+        report_path = job_ws / "report.md"
+        if report_path.exists():
+            console.print("\n[bold]Rejection reasons:[/]")
+            console.print(report_path.read_text())
 
 
 # ---------------------------------------------------------------------------

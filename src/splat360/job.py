@@ -187,3 +187,9 @@ class Job:
         entry["error"] = None
         # Keep existing fingerprint and timing
         self._write_manifest()
+
+    def update_manifest_stage(self, stage_name: str, data: dict[str, Any]) -> None:
+        """Update arbitrary data for a stage in the manifest."""
+        entry = self._manifest["stages"].setdefault(stage_name, _empty_stage_entry())
+        entry.update(data)
+        self._write_manifest()
