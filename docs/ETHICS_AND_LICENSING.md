@@ -1,0 +1,3 @@
+# Ethics and Licensing
+
+Permissions.
