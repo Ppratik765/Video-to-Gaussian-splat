@@ -44,7 +44,6 @@ def select_keyframes(
     # Track the sharpest frame within the window
     best_candidate = None
     best_candidate_blur = -1.0
-    best_candidate_gray = None
     best_candidate_cum = 0.0
 
     for frame_idx, t_sec, frame_bgr in frame_stream:
@@ -82,7 +81,6 @@ def select_keyframes(
         if curr_blur > best_candidate_blur:
             best_candidate_blur = curr_blur
             best_candidate = (frame_idx, t_sec, curr_blur, cumulative_parallax, frame_bgr)
-            best_candidate_gray = curr_gray
             best_candidate_cum = cumulative_parallax
 
         prev_gray = curr_gray
@@ -119,5 +117,4 @@ def select_keyframes(
 
             best_candidate_blur = curr_blur
             best_candidate = (frame_idx, t_sec, curr_blur, cumulative_parallax, frame_bgr)
-            best_candidate_gray = curr_gray
             best_candidate_cum = cumulative_parallax

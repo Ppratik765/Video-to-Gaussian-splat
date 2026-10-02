@@ -39,7 +39,8 @@ def make_test_video(path: Path, variant: str, duration: int = 6, fps: int = 10):
         elif variant == "occluder":
             cam_pos = np.array([t * 4.0, 0.0, 0.0])
             img, mask = render_equirect_panorama(cam_pos, np.eye(3), width, height, uniform_sky=False, occluder=True)
-            if i == 0: gt_mask = mask
+            if i == 0:
+                gt_mask = mask
         elif variant == "uniform_region":
             cam_pos = np.array([t * 4.0, 0.0, 0.0])
             img = render_equirect_panorama(cam_pos, np.eye(3), width, height, uniform_sky=True, occluder=False)

@@ -1,8 +1,7 @@
+import shutil
 from pathlib import Path
 
 import cv2
-
-import shutil
 import pytest
 
 from splat360.ingest.probe import probe_video

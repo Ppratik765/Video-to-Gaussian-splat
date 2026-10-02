@@ -47,7 +47,7 @@ def test_select_keyframes_memory_and_timing():
     for kf in gen:
         kfs.append(kf)
         # Check memory usage inside loop
-        current, peak = tracemalloc.get_traced_memory()
+        _current, peak = tracemalloc.get_traced_memory()
         # Memory should be roughly constant, well under what 1000 frames would take
         # 1000 frames of 128x256x3 = ~98 MB.
         assert peak < 50 * 1024 * 1024 # 50 MB
