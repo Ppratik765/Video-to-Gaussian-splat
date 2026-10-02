@@ -82,7 +82,7 @@ def render_equirect_panorama(
         for sign in (+1, -1):
             plane = sign * r
             d = world_ray[..., axis]
-            
+
             # Avoid division by zero explicitly
             valid_d = np.abs(d) > 1e-6
             t = np.full_like(d, np.inf)

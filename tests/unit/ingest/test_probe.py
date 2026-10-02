@@ -1,6 +1,7 @@
-import cv2
-import pytest
 from pathlib import Path
+
+import cv2
+
 from splat360.ingest.probe import probe_video
 
 
