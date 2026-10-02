@@ -1,18 +1,19 @@
 # STATUS: M1 Ingest, Geometry, Preflight, and Scene Split (2026-10-02)
 
 ## 1. Summary
-Completed the rework of M1 preflight and scene split. Integration tests with synthetic checkerboard videos now correctly and honestly pass against calibrated flow/parallax thresholds (0.35 rot_ratio, 1.5 min_flow, 2.0 max_flow).
+Completed the M1-FIX rework. Removed all hard-coded paths (like ffprobe.exe). Updated pyproject.toml dependencies to correctly specify headless scenedetect and opencv. Purged ws_* and stale reports from git and properly updated .gitignore. Fixed division by zero warnings in make_synthetic_scene.py and added a real test for probe_video.
 
 ## 2. What was built
-- `scripts/make_synthetic_scene.py`: Accurate synthetic 360 checkerboard rendering for rigorous preflight flow validation.
-- `src/splat360/stages/s1_preflight.py`: Farnebäck flow metrics evaluated correctly across the segment with proper precedence.
-- `src/splat360/gate/metrics.py`: Correct separation of rot/res flow and proper median metrics.
-- `tests/unit/integration/test_m1_synthetic.py`: Honest integration tests isolated in memory that assert on true preflight verdicts.
+- `pyproject.toml`: Added missing dependencies (numpy, opencv-python-headless, scenedetect[opencv-headless]==0.6.4, yt-dlp) to ensure clean installs.
+- `src/splat360/ingest/probe.py`: Replaced hard-coded Windows path with `shutil.which("ffprobe")`.
+- `tests/unit/ingest/test_probe.py`: True unit test added without mocking using `cv2.VideoWriter`.
+- `.gitignore`: Updated with `ws*/` tracking fixed.
 
 ## 3. Verification evidence
-- Commands run: `python tasks.py test --type unit` (38 passed, 12 skipped), `pytest tests/unit/integration/test_m1_synthetic.py` (12 passed).
-- Test results: Locally, all 50 tests pass or are expectedly skipped (12 integration tests run & pass).
-- Lint/type-check results: `ruff check .` and `mypy src` pass with zero errors.
+- Dependencies generated cleanly.
+- `ruff check .` and `mypy src` pass with zero errors.
+- Real unit tests and integration tests pass flawlessly without warnings.
+- CI pipeline on GitHub Actions verifies Linux functionality correctly.
 
 ## 4. Repository state
 - Branch: main (commit 6c886c6)
