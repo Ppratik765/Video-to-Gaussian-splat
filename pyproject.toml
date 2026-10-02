@@ -12,6 +12,10 @@ dependencies = [
     "pyyaml>=6.0",
     "typer>=0.9",
     "rich>=13.0",
+    "numpy",
+    "opencv-python-headless",
+    "scenedetect[opencv-headless]==0.6.4",
+    "yt-dlp",
 ]
 
 [project.scripts]
@@ -23,6 +27,7 @@ dev = [
     "ruff>=0.1",
     "mypy>=1.5",
     "pre-commit",
+    "types-PyYAML",
 ]
 gpu = [
     "torch",

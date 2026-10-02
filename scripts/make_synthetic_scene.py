@@ -82,13 +82,16 @@ def render_equirect_panorama(
         for sign in (+1, -1):
             plane = sign * r
             d = world_ray[..., axis]
-            # Avoid division by zero
-            with np.errstate(divide="ignore", invalid="ignore"):
-                t = (plane - cam_pos[axis]) / d
-            valid = (t > 0.01)
+            
+            # Avoid division by zero explicitly
+            valid_d = np.abs(d) > 1e-6
+            t = np.full_like(d, np.inf)
+            t[valid_d] = (plane - cam_pos[axis]) / d[valid_d]
+            valid = (t > 0.01) & valid_d
 
-            # Compute intersection point
-            hit = cam_pos + t[..., None] * world_ray  # (H, W, 3)
+            # Compute intersection point explicitly for valid pixels only
+            hit = np.zeros_like(world_ray)
+            hit[valid] = cam_pos + t[valid, None] * world_ray[valid]  # (H, W, 3)
 
             # Check if within the cube
             other_axes = [i for i in range(3) if i != axis]

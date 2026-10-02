@@ -1,3 +1,4 @@
+import shutil
 import json
 import subprocess
 from pathlib import Path
@@ -7,8 +8,12 @@ def probe_video(video_path: Path) -> dict:
     """
     Probe video using ffprobe.
     """
+    ffprobe_path = shutil.which("ffprobe")
+    if not ffprobe_path:
+        raise RuntimeError("ffprobe not found. Is ffmpeg installed and on PATH?")
+
     cmd = [
-        r"C:\Users\ppmak\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-9.0.2-full_build\bin\ffprobe.exe",
+        ffprobe_path,
         "-v", "quiet",
         "-print_format", "json",
         "-show_format",
