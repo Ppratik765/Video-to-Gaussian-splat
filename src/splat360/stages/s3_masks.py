@@ -11,6 +11,8 @@ import cv2
 from splat360.config import PipelineConfig
 from splat360.constants import STAGE_FRAMES, STAGE_MASKS
 from splat360.errors import StageFailed
+from splat360.geometry.remap import compute_remap_coordinates
+from splat360.geometry.rig import get_rig
 from splat360.job import Job
 from splat360.masking.camera_attached import compute_camera_attached_mask
 from splat360.masking.combine import combine_masks
@@ -106,8 +108,18 @@ class MasksStage(Stage):
 
         equirect_shape = keyframes_gray[0].shape[:2]
 
+        # Prepare remap coordinates for camera-attached mask
+        working_res = cfg.preflight.working_resolution
+        rig = get_rig("cube6_fov100")
+        view_w = working_res
+        view_h = working_res
+        remaps = []
+        for v in rig:
+            map_x, map_y = compute_remap_coordinates(v, view_w, view_h, equirect_shape[1], equirect_shape[0])
+            remaps.append((v, map_x, map_y))
+
         # 1. Camera-attached mask
-        camera_attached_mask = compute_camera_attached_mask(keyframes_gray, cfg.masks.camera_attached_threshold)
+        camera_attached_mask = compute_camera_attached_mask(keyframes_gray, cfg.masks.camera_attached_threshold, remaps, equirect_shape)
 
         # 2. Dynamic object mask
         if segmenter is None:

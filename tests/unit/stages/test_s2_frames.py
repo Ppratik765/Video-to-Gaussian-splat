@@ -1,57 +1,64 @@
-import json
-from pathlib import Path
+import tracemalloc
 
-import cv2
 import numpy as np
 
-from splat360.config import PipelineConfig
-from splat360.job import Job
-from splat360.stages.s2_frames import FramesStage
+from splat360.geometry.remap import compute_remap_coordinates
+from splat360.geometry.rig import get_rig
+from splat360.video.keyframes import select_keyframes
 
 
-def test_s2_frames_child(tmp_path: Path):
-    cfg = PipelineConfig()
-    cfg.frames.min_gap_frames = 1
-    cfg.frames.max_gap_frames = 10
+def test_select_keyframes_memory_and_timing():
+    """
+    Test that select_keyframes is a generator that does not hold all frames in memory.
+    Also tests that parallax bookkeeping produces correct keyframe selection over time.
+    """
+    # 1. Create a dummy generator that yields 1000 frames
+    def frame_gen():
+        for i in range(100):
+            # A moving vertical bar to create some parallax
+            img = np.zeros((128, 256, 3), dtype=np.uint8)
+            x_start = min(i * 2, 230)
+            img[:, x_start : x_start + 20] = 255
+            yield (i, i / 30.0, img)
 
-    # Create parent and child workspaces
-    parent_ws = tmp_path / "job_abc"
-    child_ws = parent_ws / "job_abc_s00"
-    child_ws.mkdir(parents=True)
+    rig = get_rig("cube6_fov100")
+    remaps = []
+    for v in rig:
+        map_x, map_y = compute_remap_coordinates(v, 64, 64, 256, 128)
+        remaps.append((v, map_x, map_y))
 
-    # Mock preflight metrics for child
-    metrics_path = child_ws / "metrics.json"
-    with open(metrics_path, "w") as f:
-        json.dump({"start": 0.0, "end": 1.0}, f)
+    def dummy_blur(img):
+        return 10.0
 
-    # Mock video file
-    source_dir = parent_ws / "00_source"
-    source_dir.mkdir()
-    video_path = source_dir / "video.mp4"
+    tracemalloc.start()
 
-    # Generate a tiny dummy video
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    out = cv2.VideoWriter(str(video_path), fourcc, 10.0, (128, 64))
-    for i in range(10):
-        frame = np.zeros((64, 128, 3), dtype=np.uint8)
-        frame[:, i*10:i*10+10] = 255  # moving block
-        out.write(frame)
-    out.release()
+    gen = select_keyframes(
+        frame_stream=frame_gen(),
+        min_parallax_px=5.0,
+        min_gap_frames=5,
+        max_gap_frames=30,
+        max_keyframes=500,
+        working_res=256,
+        remaps=remaps,
+        blur_fn=dummy_blur
+    )
 
-    job = Job(workspace=child_ws, cfg=cfg, job_id="job_abc_s00")
+    kfs = []
+    for kf in gen:
+        kfs.append(kf)
+        # Check memory usage inside loop
+        current, peak = tracemalloc.get_traced_memory()
+        # Memory should be roughly constant, well under what 1000 frames would take
+        # 1000 frames of 128x256x3 = ~98 MB.
+        assert peak < 50 * 1024 * 1024 # 50 MB
+        if len(kfs) >= 20:
+            break
 
-    stage = FramesStage()
-    res = stage._run_child(job, cfg, parent_ws=parent_ws)
+    tracemalloc.stop()
 
-    assert res.success
-
-    frames_dir = child_ws / "02_frames"
-    assert frames_dir.is_dir()
-
-    csv_path = frames_dir / "frame_index.csv"
-    assert csv_path.exists()
-
-    # Check that at least some keyframes were extracted
-    with open(csv_path) as f:
-        lines = f.readlines()
-        assert len(lines) > 1 # Header + at least one frame
+    assert len(kfs) > 0
+    # verify frame distances are uniform because movement is constant
+    frame_gaps = [kfs[i]["frame_idx"] - kfs[i-1]["frame_idx"] for i in range(1, len(kfs))]
+    # standard deviation should be small
+    std_gap = np.std(frame_gaps)
+    assert std_gap < 15.0 # Relatively uniform

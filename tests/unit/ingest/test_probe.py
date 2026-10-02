@@ -2,10 +2,15 @@ from pathlib import Path
 
 import cv2
 
+import shutil
+import pytest
+
 from splat360.ingest.probe import probe_video
 
 
 def test_probe_video_on_real_clip(tmp_path: Path):
+    if not shutil.which("ffprobe"):
+        pytest.skip("ffprobe not found on PATH")
     # Generate a tiny 1-second video
     video_path = tmp_path / "tiny.mp4"
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")

@@ -116,6 +116,7 @@ class FramesStage(Stage):
         )
 
         csv_path = out_dir / "frame_index.csv"
+        kf_count = 0
         with open(csv_path, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerow(["keyframe_id", "source_frame", "timestamp", "blur", "parallax"])
@@ -132,9 +133,10 @@ class FramesStage(Stage):
                     f"{item['blur']:.2f}",
                     f"{item['parallax']:.2f}"
                 ])
+                kf_count += 1
 
         job.update_manifest_stage(self.name, {
-            "keyframe_count": len(selected)
+            "keyframe_count": kf_count
         })
 
         return StageResult(success=True)

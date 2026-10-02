@@ -47,6 +47,8 @@ def render_equirect_panorama(
     width: int = 320,
     height: int = 160,
     room_radius: float = 30.0,
+    uniform_sky: bool = False,
+    occluder: bool = False,
 ) -> np.ndarray:
     """
     Render a dense equirectangular panorama by ray-casting into a procedurally
@@ -127,14 +129,32 @@ def render_equirect_panorama(
         best_color = np.where(closer[..., None], face_color, best_color)
 
     img = np.clip(best_color, 0, 255).astype(np.uint8)
+    mask = np.zeros((height, width), dtype=np.uint8)
+
+    if uniform_sky:
+        img[:height//2, :] = [255, 200, 100]
+
+    if occluder:
+        # Fixed blob at nadir in camera frame (bottom of equirect)
+        # Let's make it a noticeable bar
+        img[-40:, width//3:2*width//3] = 128
+        mask[-40:, width//3:2*width//3] = 255
+
+    if occluder:
+        return img, mask
     return img
 
 
-def render_pass_frame(t: float, width: int, height: int) -> np.ndarray:
+def render_pass_frame(t: float, width: int, height: int, uniform_sky: bool = False, occluder: bool = False):
     """Lateral translation at 4 units/sec."""
     cam_pos = np.array([t * 4.0, 0.0, 0.0])
     cam_rot = np.eye(3)
-    return render_equirect_panorama(cam_pos, cam_rot, width, height)
+    return render_equirect_panorama(cam_pos=cam_pos, cam_rot=cam_rot, width=width, height=height, room_radius=30.0, uniform_sky=uniform_sky, occluder=occluder)
+
+    """Lateral translation at 4 units/sec."""
+    cam_pos = np.array([t * 4.0, 0.0, 0.0])
+    cam_rot = np.eye(3)
+    return render_equirect_panorama( cam_pos, cam_rot, width, height)
 
 
 def render_pure_yaw_frame(t: float, width: int, height: int) -> np.ndarray:
@@ -151,12 +171,12 @@ def render_pure_yaw_frame(t: float, width: int, height: int) -> np.ndarray:
         [-np.sin(theta), 0, np.cos(theta)],
     ])
     cam_pos = np.zeros(3)
-    return render_equirect_panorama(cam_pos, cam_rot, width, height)
+    return render_equirect_panorama( cam_pos, cam_rot, width, height)
 
 
 def render_static_frame(width: int, height: int) -> np.ndarray:
     """Static camera."""
-    return render_equirect_panorama(np.zeros(3), np.eye(3), width, height)
+    return render_equirect_panorama(np.zeros(3), np.eye(3), width, height, uniform_sky=False, occluder=False)
 
 
 def render_too_fast_frame(t: float, width: int, height: int) -> np.ndarray:
@@ -166,9 +186,22 @@ def render_too_fast_frame(t: float, width: int, height: int) -> np.ndarray:
     omega = 2 * np.pi / 3.0  # 1 rev per 3 secs
     cam_pos = np.array([np.cos(omega * t) * 10.0 - 10.0, 0.0, np.sin(omega * t) * 10.0])
     cam_rot = np.eye(3)
-    return render_equirect_panorama(cam_pos, cam_rot, width, height)
+    return render_equirect_panorama( cam_pos, cam_rot, width, height)
 
 
+
+def render_variable_speed_frame(t: float, width: int, height: int):
+    # 0-2s: fast (8 units/sec)
+    # 2-4s: slow (2 units/sec)
+    # 4-6s: stopped (0 units/sec)
+    if t < 2.0:
+        pos = t * 8.0
+    elif t < 4.0:
+        pos = 16.0 + (t - 2.0) * 2.0
+    else:
+        pos = 20.0
+    cam_pos = np.array([pos, 0.0, 0.0])
+    return render_equirect_panorama(cam_pos, np.eye(3), width, height, uniform_sky=False, occluder=False)
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -206,12 +239,19 @@ def main() -> None:
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     out = cv2.VideoWriter(str(temp_mp4), fourcc, fps, (width, height))
 
+
+    gt_mask = None
     for i in range(total_frames):
         t = i / fps
 
         if args.variant == "pass":
             img = render_pass_frame(t, width, height)
-
+        elif args.variant == "occluder":
+            img, gt_mask = render_pass_frame(t, width, height, occluder=True)
+        elif args.variant == "uniform_region":
+            img = render_pass_frame(t, width, height, uniform_sky=True)
+        elif args.variant == "variable_speed":
+            img = render_variable_speed_frame(t, width, height)
         elif args.variant == "pure_yaw":
             img = render_pure_yaw_frame(t, width, height)
 
@@ -240,7 +280,7 @@ def main() -> None:
             else:
                 # Hard cut: different camera height to change appearance drastically
                 cam_pos = np.array([(t - 6.0) * 4.0, 5.0, 0.0])
-                img = render_equirect_panorama(cam_pos, np.eye(3), width, height)
+                img = render_equirect_panorama(cam_pos, np.eye(3), width, height, uniform_sky=False, occluder=False)
 
         elif args.variant == "blur":
             img = render_pass_frame(t, width, height)
@@ -251,7 +291,11 @@ def main() -> None:
 
         out.write(img)
 
+
     out.release()
+    if gt_mask is not None:
+        cv2.imwrite(str(Path(args.out).with_suffix('.mask.png')), gt_mask)
+
 
     if ffmpeg is None:
         # No re-encode: just rename temp to final.

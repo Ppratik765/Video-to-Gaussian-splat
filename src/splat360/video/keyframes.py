@@ -21,7 +21,7 @@ def select_keyframes(
     working_res: int,
     remaps: list[Any],
     blur_fn: Any,
-) -> list[dict[str, Any]]:
+) -> Any:
     """
     Select keyframes by accumulated translation-induced parallax.
 
@@ -34,16 +34,18 @@ def select_keyframes(
     Returns:
         List of dicts with keys: frame_idx, timestamp, blur, parallax
     """
-    selected: list[dict[str, Any]] = []
+    emitted_count = 0
 
     prev_gray = None
-    accumulated_parallax = 0.0
+    cumulative_parallax = 0.0
+    last_keyframe_cum = 0.0
     frames_since_last_keyframe = 0
 
     # Track the sharpest frame within the window
     best_candidate = None
     best_candidate_blur = -1.0
     best_candidate_gray = None
+    best_candidate_cum = 0.0
 
     for frame_idx, t_sec, frame_bgr in frame_stream:
         # Resize to working resolution
@@ -51,19 +53,6 @@ def select_keyframes(
         small_h = working_res // 2
         small = cv2.resize(frame_bgr, (working_res, small_h))
         curr_gray = cv2.cvtColor(small, cv2.COLOR_BGR2GRAY)
-
-        # Calculate blur on the central view
-        _v0, map_x0, map_y0 = remaps[0]
-        view_front = remap_image(curr_gray, map_x0, map_y0)
-        curr_blur = blur_fn(view_front)
-
-        frames_since_last_keyframe += 1
-
-        # Keep track of the sharpest frame in the current window
-        if curr_blur > best_candidate_blur:
-            best_candidate_blur = curr_blur
-            best_candidate = (frame_idx, t_sec, curr_blur, accumulated_parallax, frame_bgr)
-            best_candidate_gray = curr_gray
 
         if prev_gray is not None:
             # Compute flow across rig views
@@ -80,55 +69,55 @@ def select_keyframes(
                 flow_views.append((flow, fl, view_w / 2.0, view_h / 2.0, v.cam_from_rig))
 
             median_res, _rot, _ratio = compute_flow_parallax(flow_views)
-            accumulated_parallax += median_res
+            cumulative_parallax += median_res
+
+        # Calculate blur on the central view
+        _v0, map_x0, map_y0 = remaps[0]
+        view_front = remap_image(curr_gray, map_x0, map_y0)
+        curr_blur = blur_fn(view_front)
+
+        frames_since_last_keyframe += 1
+
+        # Keep track of the sharpest frame in the current window
+        if curr_blur > best_candidate_blur:
+            best_candidate_blur = curr_blur
+            best_candidate = (frame_idx, t_sec, curr_blur, cumulative_parallax, frame_bgr)
+            best_candidate_gray = curr_gray
+            best_candidate_cum = cumulative_parallax
 
         prev_gray = curr_gray
 
         # Decide whether to emit a keyframe
         keep = False
 
-        if len(selected) == 0:
+        if emitted_count == 0:
             # Always keep the first frame
             keep = True
         elif frames_since_last_keyframe >= max_gap_frames:
             # Continuity rule: forced to keep the best candidate we saw
             keep = True
-        elif frames_since_last_keyframe >= min_gap_frames and accumulated_parallax >= min_parallax_px:
+        elif frames_since_last_keyframe >= min_gap_frames and (best_candidate_cum - last_keyframe_cum) >= min_parallax_px:
             keep = True
 
-        if keep:
-            # Emit the best candidate found in the window
-            if best_candidate is not None:
-                cand_idx, cand_t, cand_blur, cand_px, cand_bgr = best_candidate
-                selected.append({
-                    "frame_idx": cand_idx,
-                    "timestamp": cand_t,
-                    "blur": cand_blur,
-                    "parallax": cand_px,
-                    "image": cand_bgr
-                })
-                # Reset accumulators, starting from the chosen candidate
-                accumulated_parallax = 0.0
-                frames_since_last_keyframe = frame_idx - cand_idx
-                best_candidate_blur = -1.0
-                best_candidate = None
-                prev_gray = best_candidate_gray
+        if keep and best_candidate is not None:
+            cand_idx, cand_t, cand_blur, cand_cum, cand_bgr = best_candidate
+            yield {
+                "frame_idx": cand_idx,
+                "timestamp": cand_t,
+                "blur": cand_blur,
+                "parallax": cand_cum - last_keyframe_cum,
+                "image": cand_bgr
+            }
+            emitted_count += 1
+            if emitted_count >= max_keyframes:
+                break
 
-                # If we've hit max keyframes, we're done
-                if len(selected) >= max_keyframes:
-                    break
-            else:
-                # Fallback if no candidate was found (shouldn't happen)
-                selected.append({
-                    "frame_idx": frame_idx,
-                    "timestamp": t_sec,
-                    "blur": curr_blur,
-                    "parallax": accumulated_parallax,
-                    "image": frame_bgr
-                })
-                accumulated_parallax = 0.0
-                frames_since_last_keyframe = 0
-                best_candidate_blur = -1.0
-                best_candidate = None
+            # Reset window for next candidate search, starting from the current frame
+            # The current frame wasn't the candidate, so it is the first frame of the next window.
+            last_keyframe_cum = cand_cum
+            frames_since_last_keyframe = frame_idx - cand_idx
 
-    return selected
+            best_candidate_blur = curr_blur
+            best_candidate = (frame_idx, t_sec, curr_blur, cumulative_parallax, frame_bgr)
+            best_candidate_gray = curr_gray
+            best_candidate_cum = cumulative_parallax
