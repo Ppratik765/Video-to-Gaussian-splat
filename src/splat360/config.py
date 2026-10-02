@@ -56,11 +56,25 @@ class PreflightConfig(BaseModel):
     max_blur_fraction: float = Field(
         0.6, description="Fraction of frames allowed to be blurry before REJECT"
     )
+    flow_baseline_seconds: float = Field(
+        0.5,
+        description=(
+            "Time gap between frame pairs used for parallax/rotation measurement. "
+            "Longer baselines give a higher SNR for translational flow separation. "
+            "Adjacent-pair measurement (1/fps) is used only for the too-fast check. "
+            "(provisional)"
+        ),
+    )
     min_flow_magnitude: float = Field(
-        2.0, description="Minimum median flow (px) to avoid no_parallax"
+        1.5, description="Minimum median residual flow (px) over baseline pairs to avoid no_parallax (provisional)"
     )
     max_flow_magnitude: float = Field(
-        10.0, description="Maximum per-frame flow (px) before motion_too_fast warning"
+        2.0,
+        description=(
+            "Maximum per-adjacent-frame flow (px) before motion_too_fast warning. "
+            "Calibrated on 320x160 synthetic scenes at 10 fps; "
+            "must be re-calibrated on real footage. (provisional)"
+        ),
     )
     camera_attached_warn: float = Field(
         0.15, description="Sphere fraction covered by camera-attached regions before WARN"
@@ -81,8 +95,14 @@ class PreflightConfig(BaseModel):
         1.0, description="Frames per second to sample for preflight checks (provisional)"
     )
     max_rotation_ratio: float = Field(
-        0.8, description="Maximum allowed rotation_ratio before REJECT (provisional)"
+        0.35,
+        description=(
+            "Maximum allowed rotation_ratio before REJECT. "
+            "rotation_ratio = rot_flow / (rot_flow + res_flow) from multi-view least-squares fit. "
+            "Calibrated on 320x160 synthetic scenes; must be re-calibrated on real footage. (provisional)"
+        ),
     )
+
 
 
 class FramesConfig(BaseModel):

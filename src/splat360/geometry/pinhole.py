@@ -10,7 +10,8 @@ def get_pixel_grid(width: int, height: int) -> tuple[np.ndarray, np.ndarray]:
     """Return meshgrid of pixel coordinates (x, y)."""
     x = np.arange(width)
     y = np.arange(height)
-    return np.meshgrid(x, y)  # type: ignore[return-value]
+    xs, ys = np.meshgrid(x, y)
+    return xs, ys
 
 def unproject(x: np.ndarray, y: np.ndarray, focal_length: float, cx: float, cy: float) -> np.ndarray:
     """

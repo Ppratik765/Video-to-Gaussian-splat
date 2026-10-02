@@ -31,6 +31,37 @@ app = typer.Typer(
 console = Console()
 
 
+def _parse_scene_timestamps(raw: str | None) -> list[tuple[float, float]] | None:
+    """Parse ``--scene-timestamps`` string into a list of (start, end) pairs.
+
+    Format: ``00:12-01:40,02:05-03:30`` or ``12.5-100.0,105-200``
+    """
+    if not raw:
+        return None
+    result: list[tuple[float, float]] = []
+    for chunk in raw.split(","):
+        chunk = chunk.strip()
+        if not chunk:
+            continue
+        parts = chunk.split("-")
+        if len(parts) != 2:
+            raise typer.BadParameter(f"Invalid timestamp range: {chunk!r}")
+        start_s, end_s = parts[0].strip(), parts[1].strip()
+        result.append((_ts_to_seconds(start_s), _ts_to_seconds(end_s)))
+    return result if result else None
+
+
+def _ts_to_seconds(ts: str) -> float:
+    """Convert 'HH:MM:SS', 'MM:SS', or plain float seconds to float."""
+    if ":" in ts:
+        segs = ts.split(":")
+        total = 0.0
+        for s in segs:
+            total = total * 60 + float(s)
+        return total
+    return float(ts)
+
+
 def _version_callback(value: bool) -> None:
     if value:
         console.print(f"splat360 {VERSION}")
@@ -88,7 +119,12 @@ def run(
     )
 
     job_ws = Path(workspace) / source.replace("/", "_").replace(":", "_")[:60]
-    job = Job(workspace=job_ws, cfg=cfg, source=source)
+    job = Job(
+        workspace=job_ws,
+        cfg=cfg,
+        source=source,
+        scene_timestamps=_parse_scene_timestamps(scene_timestamps),
+    )
 
     console.print(f"[bold green]Job {job.job_id}[/] → {job.workspace}")
 
@@ -159,6 +195,10 @@ def inspect(
     video: str = typer.Argument(..., help="Video URL or path to inspect."),
     preset: str | None = typer.Option(None, "--preset", "-p"),
     workspace: str = typer.Option("workspace", "--workspace", "-w"),
+    scene_timestamps: str | None = typer.Option(
+        None, "--scene-timestamps",
+        help="Comma-separated time ranges e.g. '00:12-01:40,02:05-03:30'. Overrides auto-detect."
+    ),
 ) -> None:
     """Run preflight only and print the verdict."""
     from splat360.config import load_config
@@ -172,7 +212,12 @@ def inspect(
 
     # Generate unique workspace for inspect
     job_ws = Path(workspace) / ("inspect_" + video.replace("/", "_").replace(":", "_")[:40])
-    job = Job(workspace=job_ws, cfg=cfg, source=video)
+    job = Job(
+        workspace=job_ws,
+        cfg=cfg,
+        source=video,
+        scene_timestamps=_parse_scene_timestamps(scene_timestamps),
+    )
 
     # We must set i_have_permission for inspect so S0 doesn't fail
     job.i_have_permission = True
@@ -190,7 +235,7 @@ def inspect(
     try:
         s1.execute(job, cfg)
     except GateRejected:
-        pass # Expected for REJECT
+        pass  # Expected for REJECT
     except StageFailed as exc:
         console.print(f"[red]Preflight failed: {exc}[/]")
         raise typer.Exit(code=1) from exc
@@ -199,12 +244,11 @@ def inspect(
     verdict = preflight_data.get("verdict", "UNKNOWN")
 
     console.print(f"\n[bold]Verdict:[/] {verdict}")
-    if verdict == "REJECT":
-        report_path = job_ws / "report.md"
-        if report_path.exists():
-            console.print("\n[bold]Rejection reasons:[/]")
-            console.print(report_path.read_text())
-
+    # Always show report for all verdicts
+    report_path = job_ws / "report.md"
+    if report_path.exists():
+        console.print("\n[bold]Report:[/]")
+        console.print(report_path.read_text())
 
 # ---------------------------------------------------------------------------
 # report

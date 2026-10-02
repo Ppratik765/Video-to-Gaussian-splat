@@ -1,1 +1,40 @@
-# default config
+# default config — all thresholds are PROVISIONAL, calibrated on synthetic scenes only.
+# NOT validated on real footage. See docs/GATE_METRICS.md for rationale.
+
+preflight:
+  # Format
+  stereo_policy: reject
+
+  # Duration gates
+  min_segment_seconds: 5.0
+  max_segment_seconds: 900.0
+
+  # Blur (provisional)
+  blur_threshold: 50.0
+  max_blur_fraction: 0.6
+
+  # Optical-flow measurement
+  # For parallax / rotation checks we use pairs separated by this interval (provisional)
+  flow_baseline_seconds: 0.5
+  # For the too-fast check we use 1/fps adjacent pairs
+  sampling_rate_fps: 1.0
+
+  # Working resolution for frame resize before flow / blur checks
+  working_resolution: 640
+
+  # Parallax gates (provisional — synthetic scene only)
+  min_flow_magnitude: 1.5
+  max_flow_magnitude: 2.0
+
+  # Rotation-domination gate (provisional)
+  max_rotation_ratio: 0.35
+
+  # Exposure (provisional)
+  exposure_flicker_threshold: 50.0
+
+  # Camera-attached occlusion (provisional)
+  camera_attached_warn: 0.15
+  camera_attached_reject: 0.40
+
+  # Dynamic content (provisional)
+  dynamic_content_warn: 0.30

@@ -93,6 +93,7 @@ class Job:
         permission_note: str = "",
         i_have_permission: bool = False,
         cookies: str | None = None,
+        scene_timestamps: list[tuple[float, float]] | None = None,
     ) -> None:
         self.job_id = job_id or uuid.uuid4().hex[:12]
         self.workspace = Path(workspace)
@@ -101,6 +102,7 @@ class Job:
         self.permission_note = permission_note
         self.i_have_permission = i_have_permission
         self.cookies = cookies
+        self.scene_timestamps: list[tuple[float, float]] | None = scene_timestamps
 
         # Load or create manifest
         self._manifest_path = self.workspace / MANIFEST_FILENAME
