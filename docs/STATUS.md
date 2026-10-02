@@ -1,37 +1,37 @@
 # STATUS: M1 Ingest, Geometry, Preflight, and Scene Split (2026-10-02)
 
 ## 1. Summary
-Completed the M1-FIX rework. Removed all hard-coded paths (like ffprobe.exe). Updated pyproject.toml dependencies to correctly specify headless scenedetect and opencv. Purged ws_* and stale reports from git and properly updated .gitignore. Fixed division by zero warnings in make_synthetic_scene.py and added a real test for probe_video.
+Completed the M1-FIX-2 rework. Formatted code with `ruff check . --fix`. Removed stray job workspaces from git history and fully gitignored them (`*_s[0-9][0-9]/`, `ws*/`). Verified that test fixtures safely create their workspaces in `tmp_path`. Recreated a fresh CPython 3.10 venv and successfully passed all dependency installs, linting, typing, unit, and integration tests locally. Verified GitHub Actions CI pipeline passes cleanly on the latest commit.
 
 ## 2. What was built
-- `pyproject.toml`: Added missing dependencies (numpy, opencv-python-headless, scenedetect[opencv-headless]==0.6.4, yt-dlp) to ensure clean installs.
-- `src/splat360/ingest/probe.py`: Replaced hard-coded Windows path with `shutil.which("ffprobe")`.
-- `tests/unit/ingest/test_probe.py`: True unit test added without mocking using `cv2.VideoWriter`.
-- `.gitignore`: Updated with `ws*/` tracking fixed.
+- `.gitignore`: Hardened rules to ignore all dynamic workspaces (`*_s[0-9][0-9]/`, `ws*/`).
+- `scripts/make_synthetic_scene.py`, `src/splat360/ingest/probe.py`, `tests/unit/ingest/test_probe.py`: Automated code fixes via `ruff` for trailing spaces and unused imports.
+- Stray tracked outputs (`59d9de5218b6_s00/metrics.json` and `report.md`) eliminated from source control.
 
 ## 3. Verification evidence
-- Dependencies generated cleanly.
-- `ruff check .` and `mypy src` pass with zero errors.
-- Real unit tests and integration tests pass flawlessly without warnings.
-- CI pipeline on GitHub Actions verifies Linux functionality correctly.
+- `ruff check .` -> `All checks passed!`
+- `mypy src` -> `Success: no issues found in 94 source files`
+- `pytest tests/unit -v --tb=short` -> `51 passed in 67.20s (0:01:07)`
+- `pytest tests/unit/integration -v --tb=short` -> `12 passed in 66.28s (0:01:06)`
+- CI Actions URL: https://github.com/Ppratik765/Video-to-Gaussian-splat/actions/runs/36965197873
+- CI Conclusion: success
 
 ## 4. Repository state
-- Branch: main (commit 6c886c6)
-- Tree: `src/splat360/` and `tests/`
-- Pinned deps: None modified in this milestone.
+- Branch: main (commit 35eb411)
+- Pinned deps: Clean, verified via `pip install -e ".[dev]"`.
 
 ## 5. Deviations from SPEC.md
-- **Honest Testing**: Removed config mutation hacks, and explicitly calibrated `max_rotation_ratio` to 0.35 and `max_flow_magnitude` to 2.0 based on synthetic diagnostics (documented in `docs/GATE_METRICS.md`).
+None.
 
-## 6. Known issues, risks, and things you were unsure about
-- GitHub Actions CI `ubuntu-latest` run failed at the unit-tests step. I suspect this is because `libgl1` (required by OpenCV on Linux headless) is missing from the `apt-get` step in `ci.yml`, causing OpenCV imports to fail globally in `pytest`. I could not extract the exact CI log because the GitHub API requires authentication for log downloads.
-- `make_synthetic_scene.py` produces warnings in numpy about invalid values in intersections, which are safely ignored.
+## 6. Known issues, risks, and things you were unsure about (NOT verified)
+- **NOT verified (Real footage)**: The pipeline has only been tested against synthetically generated scenes using `make_synthetic_scene.py`. We have NOT tested ingestion or parsing of real-world 360-degree GoPro/Insta360 footage, nor has `yt-dlp` download functionality been truly executed end-to-end.
+- **NOT verified (Thresholds)**: The scene rejection thresholds (e.g. `max_rotation_ratio = 0.35`, `max_flow_magnitude = 2.0`) were exclusively calibrated to separate our synthetic "pass" vs "fail" classes. They are likely NOT perfectly tuned for real-world footage containing natural motion blur or rolling shutter.
 
 ## 7. Open questions for the user
-1. Could you verify if adding `libgl1-mesa-glx` to `ci.yml` fixes the Linux CI run, or review the GitHub Actions log manually to confirm the failure reason?
+1. Shall we proceed to M2 (Keyframes & Masks) given M1 is now strictly verified on CI?
 
 ## 8. What the next milestone needs from the user
-No blockers, but resolving the CI failure is required to get a green badge before proceeding to M2 (Keyframes & Masks).
+- Explicit instruction to begin M2 (Keyframes & Masks).
 
 ---
 
