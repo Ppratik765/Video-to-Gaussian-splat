@@ -237,7 +237,11 @@ def _auto_detect_scenes(video_path: str, duration: float) -> list[tuple[float, f
     if _detect is not None:
         try:
             scenes = _detect(video_path, AdaptiveDetector())
-            result = [(s[0].seconds, s[1].seconds) for s in scenes]
+            result = []
+            for s in scenes:
+                start = s[0].get_seconds() if hasattr(s[0], "get_seconds") else s[0].seconds
+                end = s[1].get_seconds() if hasattr(s[1], "get_seconds") else s[1].seconds
+                result.append((start, end))
             if result:
                 return result
         except Exception as e:
