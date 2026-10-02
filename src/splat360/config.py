@@ -117,6 +117,20 @@ class FramesConfig(BaseModel):
     jpeg_quality: int = Field(95, description="JPEG quality for saved keyframes")
 
 
+class MaskConfig(BaseModel):
+    """Settings for S3 (masking)."""
+
+    camera_attached_threshold: float = Field(
+        15.0, description="Temporal variance threshold for camera-attached pixels"
+    )
+    segmenter: str | None = Field(
+        None, description="'segformer' | 'mask2former' | null for dynamic object segmentation"
+    )
+    downweight_zenith_nadir: bool = Field(
+        False, description="Downweight zenith and nadir bands"
+    )
+
+
 class RigConfig(BaseModel):
     """Settings for S4 (equirect → perspective views)."""
 
@@ -194,6 +208,7 @@ class PipelineConfig(BaseModel):
     ingest: IngestConfig = Field(default_factory=lambda: IngestConfig())
     preflight: PreflightConfig = Field(default_factory=lambda: PreflightConfig())
     frames: FramesConfig = Field(default_factory=lambda: FramesConfig())
+    masks: MaskConfig = Field(default_factory=lambda: MaskConfig())
     rig: RigConfig = Field(default_factory=lambda: RigConfig())
     sfm: SfmConfig = Field(default_factory=lambda: SfmConfig())
     post_sfm_gate: PostSfmGateConfig = Field(default_factory=lambda: PostSfmGateConfig())

@@ -1,1 +1,4 @@
-# ride_fast
+frames:
+  min_gap_frames: 2
+  max_gap_frames: 15
+  min_parallax_px: 120.0
