@@ -10,7 +10,7 @@ import cv2
 import numpy as np
 
 from splat360.config import PipelineConfig
-from splat360.constants import STAGE_FRAMES, STAGE_MASKS, STAGE_RIG
+from splat360.constants import STAGE_FRAMES, STAGE_MASKS, STAGE_RIG, STATUS_DONE
 from splat360.errors import StageFailed
 from splat360.geometry.pinhole import fov_to_focal_length
 from splat360.geometry.remap import compute_remap_coordinates, remap_image
@@ -50,7 +50,7 @@ class RigStage(Stage):
                 child_job = Job(workspace=child_ws, cfg=cfg, job_id=seg["seg_id"])
 
                 fp = self.fingerprint(child_job, cfg)
-                if not cfg.force and child_job.stage_fingerprint(self.name) == fp and child_job.stage_status(self.name) == "DONE":
+                if not cfg.force and child_job.stage_fingerprint(self.name) == fp and child_job.stage_status(self.name) == STATUS_DONE:
                     logger.info(f"Skipping {self.name} for {seg['seg_id']}, unchanged.")
                     continue
 

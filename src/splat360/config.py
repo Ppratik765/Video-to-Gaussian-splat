@@ -123,6 +123,16 @@ class MaskConfig(BaseModel):
     camera_attached_threshold: float = Field(
         15.0, description="Temporal variance threshold for camera-attached pixels"
     )
+    camera_attached_min_scene_variance: float = Field(
+        5.0,
+        description="Median view variance required before any pixel may be called camera-attached (provisional)",
+    )
+    camera_attached_max_variance: float = Field(
+        5.0, description="Absolute variance ceiling for a camera-attached pixel (provisional)"
+    )
+    camera_attached_min_blob_fraction: float = Field(
+        0.001, description="Drop attached-mask blobs smaller than this image fraction (provisional)"
+    )
     segmenter: str | None = Field(
         None, description="'segformer' | 'mask2former' | null for dynamic object segmentation"
     )

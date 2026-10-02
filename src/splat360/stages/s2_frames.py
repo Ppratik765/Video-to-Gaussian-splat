@@ -9,7 +9,7 @@ from pathlib import Path
 import cv2
 
 from splat360.config import PipelineConfig
-from splat360.constants import STAGE_FRAMES, STAGE_PREFLIGHT
+from splat360.constants import STAGE_FRAMES, STAGE_PREFLIGHT, STATUS_DONE
 from splat360.errors import StageFailed
 from splat360.gate.metrics import compute_blur
 from splat360.geometry.remap import compute_remap_coordinates
@@ -53,7 +53,7 @@ class FramesStage(Stage):
 
                 # Check child fingerprint
                 fp = self.fingerprint(child_job, cfg)
-                if not cfg.force and child_job.stage_fingerprint(self.name) == fp and child_job.stage_status(self.name) == "DONE":
+                if not cfg.force and child_job.stage_fingerprint(self.name) == fp and child_job.stage_status(self.name) == STATUS_DONE:
                     logger.info(f"Skipping {self.name} for {seg['seg_id']}, unchanged.")
                     continue
 

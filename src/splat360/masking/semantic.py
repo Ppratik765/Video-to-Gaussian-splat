@@ -40,7 +40,8 @@ class HFSegmenter(Segmenter):
         self.model_type = model_type
 
         if model_type == "segformer":
-            # MIT license for code, weights often NC but commonly used.
+            # LICENSE UNCONFIRMED: HF tags the weights 'other' (NVIDIA terms, likely non-commercial).
+            # Optional and off by default; see docs/THIRD_PARTY.md.
             # Using b0 for speed.
             model_id = "nvidia/segformer-b0-finetuned-ade-512-512"
             self.processor = AutoImageProcessor.from_pretrained(model_id)

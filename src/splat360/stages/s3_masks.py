@@ -4,17 +4,22 @@ from __future__ import annotations
 import csv
 import json
 import logging
+from collections.abc import Iterator
 from pathlib import Path
 
 import cv2
+import numpy as np
 
 from splat360.config import PipelineConfig
-from splat360.constants import STAGE_FRAMES, STAGE_MASKS
+from splat360.constants import STAGE_FRAMES, STAGE_MASKS, STATUS_DONE
 from splat360.errors import StageFailed
 from splat360.geometry.remap import compute_remap_coordinates
 from splat360.geometry.rig import get_rig
 from splat360.job import Job
-from splat360.masking.camera_attached import compute_camera_attached_mask
+from splat360.masking.camera_attached import (
+    camera_attached_mask_from_variance,
+    compute_temporal_variance,
+)
 from splat360.masking.combine import combine_masks
 from splat360.masking.debug import create_debug_overlay
 from splat360.masking.semantic import HFSegmenter, NullSegmenter, Segmenter
@@ -56,7 +61,7 @@ class MasksStage(Stage):
                 child_job = Job(workspace=child_ws, cfg=cfg, job_id=seg["seg_id"])
 
                 fp = self.fingerprint(child_job, cfg)
-                if not cfg.force and child_job.stage_fingerprint(self.name) == fp and child_job.stage_status(self.name) == "DONE":
+                if not cfg.force and child_job.stage_fingerprint(self.name) == fp and child_job.stage_status(self.name) == STATUS_DONE:
                     logger.info(f"Skipping {self.name} for {seg['seg_id']}, unchanged.")
                     continue
 
@@ -84,42 +89,56 @@ class MasksStage(Stage):
         if not csv_path.exists():
             raise StageFailed(self.name, "frame_index.csv not found from S2")
 
-        keyframes_gray = []
-        keyframes_bgr = []
-        kf_ids = []
-
+        kf_ids: list[str] = []
+        kf_paths: list[Path] = []
         with open(csv_path, encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
+            for row in csv.DictReader(f):
                 kf_id = row["keyframe_id"]
                 img_path = frames_dir / f"{kf_id}.jpg"
                 if not img_path.exists():
                     img_path = frames_dir / f"{kf_id}.png"
-                img = cv2.imread(str(img_path))
-                if img is None:
+                if not img_path.exists():
                     continue
-
-                keyframes_bgr.append(img)
-                keyframes_gray.append(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY))
                 kf_ids.append(kf_id)
+                kf_paths.append(img_path)
 
-        if not keyframes_gray:
+        if not kf_ids:
             raise StageFailed(self.name, "No keyframes loaded")
 
-        equirect_shape = keyframes_gray[0].shape[:2]
+        def _gray_stream() -> Iterator[np.ndarray]:
+            # One frame in RAM at a time (keyframes can be 5.7K x 2.9K on real footage)
+            for p in kf_paths:
+                g = cv2.imread(str(p), cv2.IMREAD_GRAYSCALE)
+                if g is not None:
+                    yield g
+
+        first = cv2.imread(str(kf_paths[0]), cv2.IMREAD_GRAYSCALE)
+        if first is None:
+            raise StageFailed(self.name, f"Could not read keyframe {kf_paths[0]}")
+        equirect_shape = (int(first.shape[0]), int(first.shape[1]))
+        del first
 
         # Prepare remap coordinates for camera-attached mask
         working_res = cfg.preflight.working_resolution
         rig = get_rig("cube6_fov100")
-        view_w = working_res
-        view_h = working_res
         remaps = []
         for v in rig:
-            map_x, map_y = compute_remap_coordinates(v, view_w, view_h, equirect_shape[1], equirect_shape[0])
+            map_x, map_y = compute_remap_coordinates(
+                v, working_res, working_res, equirect_shape[1], equirect_shape[0]
+            )
             remaps.append((v, map_x, map_y))
 
-        # 1. Camera-attached mask
-        camera_attached_mask = compute_camera_attached_mask(keyframes_gray, cfg.masks.camera_attached_threshold, remaps, equirect_shape)
+        # 1. Camera-attached mask (streaming temporal variance)
+        variance = compute_temporal_variance(_gray_stream())
+        camera_attached_mask = camera_attached_mask_from_variance(
+            variance,
+            cfg.masks.camera_attached_threshold,
+            remaps,
+            equirect_shape,
+            min_scene_variance=cfg.masks.camera_attached_min_scene_variance,
+            max_attached_variance=cfg.masks.camera_attached_max_variance,
+            min_blob_fraction=cfg.masks.camera_attached_min_blob_fraction,
+        )
 
         # 2. Dynamic object mask
         if segmenter is None:
@@ -133,6 +152,12 @@ class MasksStage(Stage):
         manual_path = job.workspace.parent / "masks" / "manual_equirect.png"
         if manual_path.exists():
             manual_mask = cv2.imread(str(manual_path), cv2.IMREAD_GRAYSCALE)
+            if manual_mask is not None and manual_mask.shape != equirect_shape:
+                manual_mask = cv2.resize(
+                    manual_mask,
+                    (equirect_shape[1], equirect_shape[0]),
+                    interpolation=cv2.INTER_NEAREST,
+                )
 
         out_dir = job.stage_dir(self.name)
         debug_dir = out_dir / "debug"
@@ -140,7 +165,10 @@ class MasksStage(Stage):
 
         step_debug = max(1, len(kf_ids) // 8)
 
-        for i, (kf_id, img_bgr) in enumerate(zip(kf_ids, keyframes_bgr, strict=True)):
+        for i, (kf_id, kf_path) in enumerate(zip(kf_ids, kf_paths, strict=True)):
+            img_bgr = cv2.imread(str(kf_path))
+            if img_bgr is None:
+                raise StageFailed(self.name, f"Could not read keyframe {kf_path}")
             dynamic_mask = segmenter.predict_dynamic_mask(img_bgr)
 
             final_mask = combine_masks(
@@ -166,4 +194,4 @@ class MasksStage(Stage):
         return StageResult(success=True)
 
     def fingerprint(self, job: Job, cfg: PipelineConfig) -> str:
-        return hash_dict({"masks": cfg.masks.model_dump(), "code_version": "v3"})
+        return hash_dict({"masks": cfg.masks.model_dump(), "code_version": "v4"})
